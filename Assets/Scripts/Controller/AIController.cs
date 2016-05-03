@@ -37,10 +37,11 @@ public class AIController : PaddleController
         if (++frameCount % UpdateFrenquency != 0)
             return;
 
-        //ProcessOutput();
+        ProcessOutput();
 
         // deduce paddle move from output
-        wantedPosY = (output - 0.5f) * GameMgr.Instance.CourtHeight;
+        //wantedPosY = (output - 0.5f) * GameMgr.Instance.CourtHeight;
+        wantedPosY = GameMgr.ComputeBallPosCourt(output);
     }
 
     void ProcessOutput()
@@ -48,7 +49,6 @@ public class AIController : PaddleController
         inputList.Clear();
         Ball ball = GameMgr.Instance.GetBall();
         //// ball pos
-        ////inputList.Add(ball.transform.position.x);
         //inputList.Add(ball.transform.position.y);
         //// ball velocity
         //Rigidbody2D rb = ball.GetComponent<Rigidbody2D>();
@@ -56,8 +56,10 @@ public class AIController : PaddleController
         //inputList.Add(rb.velocity.y);
 
         Ball.BallData colParams = ball.GetBallData;
-        inputList.Clear();
+        //inputList.Clear();
         inputList.Add(colParams.posY);
+        //inputList.Add(GameMgr.ComputeBallPos0To1(ball.transform.position.y));
+        //inputList.Add(ball.transform.position.y);
         inputList.Add(colParams.direction.x);
         inputList.Add(colParams.direction.y);
 
@@ -95,18 +97,22 @@ public class AIController : PaddleController
 
     private void LearnFromBallPos(Vector3 ballPos)
     {
-        int courtHeight = GameMgr.Instance.CourtHeight;
-        expectedOutput = ballPos.y / courtHeight + 0.5f;
-        expectedOutput = Mathf.Max(Mathf.Min(expectedOutput, 1f), 0f);
+        //int courtHeight = GameMgr.Instance.CourtHeight;
+        //expectedOutput = ballPos.y / courtHeight + 0.5f;
+        //expectedOutput = Mathf.Max(Mathf.Min(expectedOutput, 1f), 0f);
+        expectedOutput = GameMgr.ComputeBallPos0To1(ballPos.y);
         //Debug.Log(expectedOutput);
 
         deltaError = Mathf.Abs(expectedOutput - output);
 
-        Ball.BallData colParams = GameMgr.Instance.GetBall().GetBallData;
-        inputList.Clear();
-        inputList.Add(colParams.posY);
-        inputList.Add(colParams.direction.x);
-        inputList.Add(colParams.direction.y);
+        //Ball.BallData colParams = GameMgr.Instance.GetBall().GetBallData;
+        //inputList.Clear();
+        //inputList.Add(colParams.posY);
+        //inputList.Add(GameMgr.ComputeBallPos0To1(colParams.posY));
+        //inputList.Add(colParams.direction.x);
+        //inputList.Add(colParams.direction.y);
+        //inputList.Add(ballPos.x);
+        //inputList.Add(ballPos.y);
 
         // do learning via backpropagation
         List<float> outputs = new List<float>();

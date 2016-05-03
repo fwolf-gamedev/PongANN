@@ -52,6 +52,15 @@ public class Ball : MonoBehaviour {
         GameMgr.Instance.AI.OnBallThrown();
     }
 
+    void Update()
+    {
+        //if (rigidBody.velocity.magnitude == 0)
+        //{
+        //    ballData.posY = transform.position.y;
+        //    ballData.direction = Vector2.right;
+        //}
+    }
+
     float ComputeHitFactor(Vector2 racketPos, float racketHeight)
     {
         return (transform.position.y - racketPos.y) / racketHeight;
@@ -100,4 +109,5 @@ public class Ball : MonoBehaviour {
             GameMgr.Instance.AI.OnBallThrown();
         }
     }
+
 }

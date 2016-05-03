@@ -29,6 +29,9 @@ public class GameMgr : MonoBehaviour {
     Text outputText;
     Text expectedPosYText;
     Text deltaOutputText;
+    Text timeScaleText;
+    Slider timeScaleSlider;
+    GameObject ToggleRandomDirGao;
 
     Ball ball;
     public Ball GetBall() { return ball; }
@@ -39,7 +42,6 @@ public class GameMgr : MonoBehaviour {
     AIController ai;
     public AIController AI { get { return ai; } }
 
-    public float TimeScale = 1f;
     public bool TrainingModeOn = false;
     public bool RandomDirOn = false;
     int trainingStep = 0;
@@ -62,14 +64,19 @@ public class GameMgr : MonoBehaviour {
         expectedPosYText = GameObject.Find("ExpectedPosY").GetComponent<Text>();
         deltaOutputText = GameObject.Find("DeltaError").GetComponent<Text>();
 
+        timeScaleSlider = GameObject.Find("TimeScaleSlider").GetComponent<Slider>();
+        timeScaleText = GameObject.Find("TimeScaleText").GetComponent<Text>();
+        timeScaleText.text = string.Format("TimeScale {0:0.0}", timeScaleSlider.value);
+
+        ToggleRandomDirGao = GameObject.Find("ToggleRandomDir");
+        ToggleRandomDirGao.SetActive(false);
+
         courtHeight = Mathf.RoundToInt(Camera.main.orthographicSize * 2f);
         nbTrainingSteps = Mathf.RoundToInt(courtHeight / ball.transform.localScale.y);
     }
 
     void Update()
     {
-        Time.timeScale = TimeScale;
-
         if (TrainingModeOn && isBallLaunched == false)
         {
             Vector3 trainingPos = playerGao.transform.position + Vector3.right * 0.6f;
@@ -84,6 +91,7 @@ public class GameMgr : MonoBehaviour {
         }
 
         ballDataPosYText.text = ball.GetBallData.posY.ToString();
+        //ballDataPosYText.text = ComputeBallPos0To1(ball.transform.position.y).ToString();
         ballDataVelocityText.text = ball.GetBallData.direction.x.ToString() + " ; " + ball.GetBallData.direction.y.ToString();
         outputText.text = ai.output.ToString();
         expectedPosYText.text = ai.ExpectedOutput.ToString();
@@ -120,11 +128,23 @@ public class GameMgr : MonoBehaviour {
     {
         TrainingModeOn = !TrainingModeOn;
         playerGao.GetComponent<BoxCollider2D>().enabled = !TrainingModeOn;
+        ToggleRandomDirGao.SetActive(TrainingModeOn);
+    }
+
+    public void ToggleRandomDir()
+    {
+        RandomDirOn = !RandomDirOn;
     }
 
     public void ToggleLearningActivation()
     {
         ai.IsLearning = !ai.IsLearning;
+    }
+
+    public void OnTimeScaleChanged()
+    {
+        Time.timeScale = timeScaleSlider.value;
+        timeScaleText.text = string.Format("TimeScale {0:0.0}", timeScaleSlider.value);
     }
 
     public void OnBallExit(bool isLeftSide)
@@ -144,5 +164,17 @@ public class GameMgr : MonoBehaviour {
 
             ai.OnPointLost(ball.transform.position);
         }
+    }
+
+    static public float ComputeBallPos0To1(float posY)
+    {
+        int courtHeight = GameMgr.Instance.CourtHeight;
+        float output = posY / courtHeight + 0.5f;
+        return output = Mathf.Max(Mathf.Min(output, 1f), 0f);
+    }
+
+    static public float ComputeBallPosCourt(float pos0To1)
+    {
+        return (pos0To1 - 0.5f) * GameMgr.Instance.CourtHeight;
     }
 }
