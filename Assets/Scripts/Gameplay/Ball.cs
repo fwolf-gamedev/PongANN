@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
 
 public class Ball : MonoBehaviour {
@@ -6,8 +7,7 @@ public class Ball : MonoBehaviour {
     public class BallData
     {
         public float posY;
-//        public Vector2 direction;
-        public float angle;
+        public int angle;
     }
     private BallData ballData = new BallData();
     public BallData GetBallData { get { return ballData; } }
@@ -26,7 +26,7 @@ public class Ball : MonoBehaviour {
 
     public void Launch(bool useRandomDir = false, bool repeatLastLaunch = false)
     {
-        float angle = 0f;
+        int angle = 0;
         if (repeatLastLaunch)
         {
             Vector3 pos = transform.position;
@@ -36,12 +36,9 @@ public class Ball : MonoBehaviour {
         }
         else if (useRandomDir)
         {
-            angle = (float)Random.Range(0, 60);
-            //dir.x = 1f; //Random.Range(0.5f, 1f);
-            //dir.y = Random.Range(0.5f, 1f);
-            if (Random.Range(0, 2) == 0)
-                angle *= -1f;
-            //dir.Normalize();
+            angle = UnityEngine.Random.Range(0, 60);
+            if (UnityEngine.Random.Range(0, 2) == 0)
+                angle *= -1;
         }
 
         Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
@@ -49,7 +46,7 @@ public class Ball : MonoBehaviour {
         currentSpeed = InitialSpeed;
 
         // store ball trajectory data
-        ballData.posY = transform.position.y;
+        ballData.posY = (float)Math.Round(Convert.ToDecimal(transform.position.y), 1);
         ballData.angle = angle;
         //ballData.angle = Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg;
 
@@ -108,9 +105,9 @@ public class Ball : MonoBehaviour {
             ai.OnBallCollide(transform.position);
         else
         {
-            ballData.posY = transform.position.y;
+            ballData.posY = (float)Math.Round(Convert.ToDecimal(transform.position.y), 1);
             Vector2 dir = GetComponent<Rigidbody2D>().velocity.normalized;
-            ballData.angle = Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg;
+            ballData.angle = Mathf.RoundToInt(Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg);
             // $$$ Q&D
             GameMgr.Instance.AI.OnBallThrown();
         }
