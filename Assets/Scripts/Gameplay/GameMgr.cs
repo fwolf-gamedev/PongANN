@@ -92,7 +92,8 @@ public class GameMgr : MonoBehaviour {
 
         ballDataPosYText.text = ball.GetBallData.posY.ToString();
         //ballDataPosYText.text = ComputeBallPos0To1(ball.transform.position.y).ToString();
-        ballDataVelocityText.text = ball.GetBallData.direction.x.ToString() + " ; " + ball.GetBallData.direction.y.ToString();
+        //ballDataVelocityText.text = ball.GetBallData.direction.x.ToString() + " ; " + ball.GetBallData.direction.y.ToString();
+        ballDataVelocityText.text = ball.GetBallData.angle.ToString();
         outputText.text = ai.output.ToString();
         expectedPosYText.text = ai.ExpectedOutput.ToString();
         deltaOutputText.color = ai.IsErrorAcceptable ? Color.green : Color.red;

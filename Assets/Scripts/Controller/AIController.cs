@@ -60,8 +60,9 @@ public class AIController : PaddleController
         inputList.Add(colParams.posY);
         //inputList.Add(GameMgr.ComputeBallPos0To1(ball.transform.position.y));
         //inputList.Add(ball.transform.position.y);
-        inputList.Add(colParams.direction.x);
-        inputList.Add(colParams.direction.y);
+        inputList.Add(colParams.angle);
+        //inputList.Add(colParams.direction.x);
+        //inputList.Add(colParams.direction.y);
 
         if (outputList != null)
             outputList.Clear();

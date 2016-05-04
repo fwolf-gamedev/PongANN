@@ -12,7 +12,7 @@ public class MLPNetwork : MonoBehaviour
     public float Gain = 0.9f;
     public float InitWeightRange = 0.2f;
 
-    public bool ComputWeights = false;
+    public bool ComputeWeights = false;
     public bool LoadWeights = false;
     public bool DoSave = false;
     public bool DoLoad = false;
@@ -21,12 +21,16 @@ public class MLPNetwork : MonoBehaviour
     public int NbHiddenPerceptron = 6;
     public int NbOutputPerceptron = 1;
 
+    public int NbHiddenLayers = 1;
+
     public List<Perceptron> InputPerceptronList = new List<Perceptron>();
-    public List<Perceptron> HiddenPerceptronList = new List<Perceptron>();
+    //public List<Perceptron> HiddenPerceptronList = new List<Perceptron>();
     public List<Perceptron> OutputPerceptronList = new List<Perceptron>();
 
-    // debug info
-    public List<float> HiddenLayerWeights = new List<float>();
+    public List<List<Perceptron>> HiddenLayerList = new List<List<Perceptron>>();
+
+    // debug info / serialization
+    public List<List<float>> HiddenLayerWeights = new List<List<float>>();
     public List<float> OutputLayerWeights = new List<float>();
 
     void Start()
@@ -37,29 +41,38 @@ public class MLPNetwork : MonoBehaviour
             InputPerceptronList.Add(perceptron);
         }
 
-        for (int i = 0; i < NbHiddenPerceptron; i++)
+        for (int i = 0; i < NbHiddenLayers; i++)
         {
-            Perceptron perceptron = new Perceptron(this);
- 
-            for (int j = 0; j < NbInputPerceptron; j++)
-            {
-                Perceptron.Input input = new Perceptron.Input();
-                input.InputPerceptron = InputPerceptronList[j];
-                input.Weight = Random.Range(-InitWeightRange, InitWeightRange);
-                perceptron.inputList.Add(input);
-            }
+            List<Perceptron> hiddenPerceptronList = new List<Perceptron>();
+            List<Perceptron> prevPerceptronList = i == 0 ? InputPerceptronList : HiddenLayerList[HiddenLayerList.Count - 1];
 
-            HiddenPerceptronList.Add(perceptron);
+            for (int j = 0; j < NbHiddenPerceptron; j++)
+            {
+                Perceptron perceptron = new Perceptron(this);
+
+                for (int k = 0; k < prevPerceptronList.Count; k++)
+                {
+                    Perceptron.Input input = new Perceptron.Input();
+                    input.InputPerceptron = prevPerceptronList[k];
+                    input.Weight = Random.Range(-InitWeightRange, InitWeightRange);
+                    perceptron.inputList.Add(input);
+                }
+
+                hiddenPerceptronList.Add(perceptron);
+            }
+            HiddenLayerList.Add(hiddenPerceptronList);
         }
 
         for (int i = 0; i < NbOutputPerceptron; i++)
         {
             Perceptron perceptron = new Perceptron(this);
 
-            for (int j = 0; j < NbHiddenPerceptron; j++)
+            List<Perceptron> prevPerceptronList = NbHiddenLayers > 0 ? HiddenLayerList[NbHiddenLayers - 1] : InputPerceptronList;
+
+            for (int j = 0; j < prevPerceptronList.Count; j++)
             {
                 Perceptron.Input input = new Perceptron.Input();
-                input.InputPerceptron = HiddenPerceptronList[j];
+                input.InputPerceptron = prevPerceptronList[j];
                 input.Weight = Random.Range(-InitWeightRange, InitWeightRange);
                 perceptron.inputList.Add(input);
             }
@@ -73,9 +86,9 @@ public class MLPNetwork : MonoBehaviour
     void Update()
     {
         // debug
-        if (ComputWeights)
+        if (ComputeWeights)
         {
-            ComputWeights = false;
+            ComputeWeights = false;
             GenerateWeights();
         }
         if (LoadWeights)
@@ -103,11 +116,14 @@ public class MLPNetwork : MonoBehaviour
 
     public void GenerateOutput(List<float> inputs)
     {
-        for(int i = 0; i < InputPerceptronList.Count; i++)
+        for (int i = 0; i < InputPerceptronList.Count; i++)
             InputPerceptronList[i].State = inputs[i];
 
-        for (int i = 0; i < HiddenPerceptronList.Count; i++)
-            HiddenPerceptronList[i].FeedForward();
+        for (int i = 0; i < HiddenLayerList.Count; i++)
+        {
+            for (int j = 0; j < HiddenLayerList[i].Count; j++)
+                HiddenLayerList[i][j].FeedForward();
+        }
 
         for (int i = 0; i < OutputPerceptronList.Count; i++)
             OutputPerceptronList[i].FeedForward();
@@ -117,16 +133,21 @@ public class MLPNetwork : MonoBehaviour
     public void GenerateWeights()
     {
         HiddenLayerWeights.Clear();
-        for (int i = 0; i < NbHiddenPerceptron; i++)
+        for (int i = 0; i < NbHiddenLayers; i++)
         {
-            for (int j = 0; j < HiddenPerceptronList[i].inputList.Count; j++)
+            HiddenLayerWeights.Add(new List<float>());
+            List<Perceptron> hiddenPerceptronList = HiddenLayerList[i];
+            for (int j = 0; j < hiddenPerceptronList.Count; j++)
             {
-                Perceptron.Input input = HiddenPerceptronList[i].inputList[j];
-                HiddenLayerWeights.Add(input.Weight);
+                for (int k = 0; k < hiddenPerceptronList[j].inputList.Count; k++)
+                {
+                    Perceptron.Input input = hiddenPerceptronList[j].inputList[k];
+                    HiddenLayerWeights[i].Add(input.Weight);
+                }
             }
         }
         OutputLayerWeights.Clear();
-        for (int i = 0; i < NbOutputPerceptron; i++)
+        for (int i = 0; i < OutputPerceptronList.Count; i++)
         {
             for (int j = 0; j < OutputPerceptronList[i].inputList.Count; j++)
             {
@@ -140,10 +161,8 @@ public class MLPNetwork : MonoBehaviour
     public void LoadFromWeight()
     {
         InputPerceptronList.Clear();
-        HiddenPerceptronList.Clear();
+        HiddenLayerList.Clear();
         OutputPerceptronList.Clear();
-
-        int weightCount = 0;
 
         for (int i = 0; i < NbInputPerceptron; i++)
         {
@@ -151,31 +170,42 @@ public class MLPNetwork : MonoBehaviour
             InputPerceptronList.Add(perceptron);
         }
 
-        for (int i = 0; i < NbHiddenPerceptron; i++)
+        int weightCount;
+        List<Perceptron> prevPerceptronList = null;
+
+        for (int i = 0; i < NbHiddenLayers; i++)
         {
-            Perceptron perceptron = new Perceptron(this);
+            HiddenLayerList.Add(new List<Perceptron>());
+            weightCount = 0;
+            prevPerceptronList = (i == 0) ? InputPerceptronList : HiddenLayerList[i - 1];
 
-            for (int j = 0; j < NbInputPerceptron; j++)
+            for (int j = 0; j < NbHiddenPerceptron; j++)
             {
-                Perceptron.Input input = new Perceptron.Input();
-                input.InputPerceptron = InputPerceptronList[j];
-                input.Weight = HiddenLayerWeights[weightCount++];
-                perceptron.inputList.Add(input);
+                Perceptron perceptron = new Perceptron(this);
+
+                for (int k = 0; k < prevPerceptronList.Count; k++)
+                {
+                    Perceptron.Input input = new Perceptron.Input();
+                    input.InputPerceptron = prevPerceptronList[k];
+                    input.Weight = HiddenLayerWeights[i][weightCount++];
+                    perceptron.inputList.Add(input);
+                }
+
+                HiddenLayerList[i].Add(perceptron);
             }
-
-            HiddenPerceptronList.Add(perceptron);
         }
-
         weightCount = 0;
+
+        prevPerceptronList = (NbHiddenLayers == 0) ? InputPerceptronList : HiddenLayerList[HiddenLayerList.Count - 1];
 
         for (int i = 0; i < NbOutputPerceptron; i++)
         {
             Perceptron perceptron = new Perceptron(this);
 
-            for (int j = 0; j < NbHiddenPerceptron; j++)
+            for (int j = 0; j < prevPerceptronList.Count; j++)
             {
                 Perceptron.Input input = new Perceptron.Input();
-                input.InputPerceptron = HiddenPerceptronList[j];
+                input.InputPerceptron = prevPerceptronList[j];
                 input.Weight = OutputLayerWeights[weightCount++];
                 perceptron.inputList.Add(input);
             }
@@ -195,6 +225,7 @@ public class MLPNetwork : MonoBehaviour
 
     private void Backpropagation(List<float> outputs)
     {
+        // adjust output perceptrons
         for (int i = 0; i < OutputPerceptronList.Count; i++)
         {
             Perceptron perceptron = OutputPerceptronList[i];
@@ -206,21 +237,27 @@ public class MLPNetwork : MonoBehaviour
             perceptron.AdjustWeight(error);
         }
 
-        for (int i = 0; i < HiddenPerceptronList.Count; i++)
+        // adjust hidden peceptrons backward
+        for (int i = HiddenLayerList.Count - 1; i >= 0; i--)
         {
-            Perceptron perceptron = HiddenPerceptronList[i];
-            float state = perceptron.State;
-
-            // calculate error term
-            float sum = 0;
-            for (int j = 0; j < OutputPerceptronList.Count; j++)
+            List<Perceptron> nextPerceptronList = (i == (HiddenLayerList.Count - 1)) ? OutputPerceptronList : HiddenLayerList[i + 1];
+            List<Perceptron> hiddenPerceptronList = HiddenLayerList[i];
+            for (int j = 0; j < hiddenPerceptronList.Count; j++)
             {
-                Perceptron outputPerceptron = OutputPerceptronList[j];
-                sum += outputPerceptron.GetIncomingWeight(perceptron) * outputPerceptron.Error;
-            }
-            float error = state * (1 - state) * sum;
+                Perceptron perceptron = hiddenPerceptronList[j];
+                float state = perceptron.State;
 
-            perceptron.AdjustWeight(error);
+                // calculate error term
+                float sum = 0;
+                for (int k = 0; k < nextPerceptronList.Count; k++)
+                {
+                    Perceptron nextPerceptron = nextPerceptronList[k];
+                    sum += nextPerceptron.GetIncomingWeight(perceptron) * nextPerceptron.Error;
+                }
+                float error = state * (1 - state) * sum;
+
+                perceptron.AdjustWeight(error);
+            }
         }
     }
 
@@ -231,14 +268,20 @@ public class MLPNetwork : MonoBehaviour
         result["NbInputPerceptron"] = NbInputPerceptron;
         result["NbHiddenPerceptron"] = NbHiddenPerceptron;
         result["NbOutputPerceptron"] = NbOutputPerceptron;
+        result["NbHiddenLayers"] = NbHiddenLayers;
 
-        for (int i = 0; i < HiddenLayerWeights.Count; i++ )
+        int count = 0;
+        for (int i = 0; i < NbHiddenLayers; i++)
         {
-            result[i.ToString()] = HiddenLayerWeights[i];
+            List<float> hiddenLayerWeights = HiddenLayerWeights[i];
+            for (int j = 0; j < hiddenLayerWeights.Count; j++, count++)
+            {
+                result[count.ToString()] = hiddenLayerWeights[j];
+            }
         }
-        for (int i = 0; i < OutputLayerWeights.Count; i++)
+        for (int i = 0; i < OutputLayerWeights.Count; i++, count++)
         {
-            result[i.ToString()] = OutputLayerWeights[i];
+            result[count.ToString()] = OutputLayerWeights[i];
         }
 
         return result;
@@ -252,16 +295,26 @@ public class MLPNetwork : MonoBehaviour
         NbInputPerceptron = System.Convert.ToInt32(source["NbInputPerceptron"]);
         NbHiddenPerceptron = System.Convert.ToInt32(source["NbHiddenPerceptron"]);
         NbOutputPerceptron = System.Convert.ToInt32(source["NbOutputPerceptron"]);
+        NbHiddenLayers = System.Convert.ToInt32(source["NbHiddenLayers"]);
 
-        int nbHiddenLayerWeights = NbInputPerceptron * NbHiddenPerceptron;
-        for (int i = 0; i < nbHiddenLayerWeights; i++)
+        int count = 0;
+
+        for (int i = 0; i < NbHiddenLayers; i++)
         {
-            HiddenLayerWeights.Add(System.Convert.ToSingle(source[i.ToString()]));
+            HiddenLayerWeights.Add(new List<float>());
+
+            int prevNbPerceptron = (i == 0) ? NbInputPerceptron : NbHiddenPerceptron;
+            int nbHiddenLayerWeights = prevNbPerceptron * NbHiddenPerceptron;
+            for (int j = 0; j < nbHiddenLayerWeights; j++, count++)
+            {
+                HiddenLayerWeights[i].Add(System.Convert.ToSingle(source[count.ToString()]));
+            }
         }
+
         int nbOutputLayerWeights = NbHiddenPerceptron * NbOutputPerceptron;
-        for (int i = 0; i < nbOutputLayerWeights; i++)
+        for (int i = 0; i < nbOutputLayerWeights; i++, count++)
         {
-            OutputLayerWeights.Add(System.Convert.ToSingle(source[i.ToString()]));
+            OutputLayerWeights.Add(System.Convert.ToSingle(source[count.ToString()]));
         }
     }
 

@@ -6,7 +6,8 @@ public class Ball : MonoBehaviour {
     public class BallData
     {
         public float posY;
-        public Vector2 direction;
+//        public Vector2 direction;
+        public float angle;
     }
     private BallData ballData = new BallData();
     public BallData GetBallData { get { return ballData; } }
@@ -25,28 +26,32 @@ public class Ball : MonoBehaviour {
 
     public void Launch(bool useRandomDir = false, bool repeatLastLaunch = false)
     {
-        Vector2 dir = Vector2.right;
+        float angle = 0f;
         if (repeatLastLaunch)
         {
-            dir = ballData.direction;
             Vector3 pos = transform.position;
             pos.y = ballData.posY;
             transform.position = pos;
+            angle = ballData.angle;
         }
         else if (useRandomDir)
         {
-            dir.x = 1f; //Random.Range(0.5f, 1f);
-            dir.y = Random.Range(0.5f, 1f);
+            angle = (float)Random.Range(0, 60);
+            //dir.x = 1f; //Random.Range(0.5f, 1f);
+            //dir.y = Random.Range(0.5f, 1f);
             if (Random.Range(0, 2) == 0)
-                dir.y *= -1f;
-            dir.Normalize();
+                angle *= -1f;
+            //dir.Normalize();
         }
 
+        Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
         rigidBody.velocity = dir * InitialSpeed;
         currentSpeed = InitialSpeed;
 
+        // store ball trajectory data
         ballData.posY = transform.position.y;
-        ballData.direction = dir;
+        ballData.angle = angle;
+        //ballData.angle = Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg;
 
         // $$$ Q&D
         GameMgr.Instance.AI.OnBallThrown();
@@ -104,7 +109,8 @@ public class Ball : MonoBehaviour {
         else
         {
             ballData.posY = transform.position.y;
-            ballData.direction = GetComponent<Rigidbody2D>().velocity.normalized;
+            Vector2 dir = GetComponent<Rigidbody2D>().velocity.normalized;
+            ballData.angle = Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg;
             // $$$ Q&D
             GameMgr.Instance.AI.OnBallThrown();
         }
