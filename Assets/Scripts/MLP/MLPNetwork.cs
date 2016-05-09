@@ -312,7 +312,7 @@ public class MLPNetwork : MonoBehaviour
             HiddenLayerWeights.Add(new List<float>());
 
             int nbHiddenPerceptron = NbPerceptronPerHiddenLayer[i];
-            int prevNbPerceptron = (i == 0) ? NbInputPerceptron : NbPerceptronPerHiddenLayer[i];
+            int prevNbPerceptron = (i == 0) ? NbInputPerceptron : NbPerceptronPerHiddenLayer[i - 1];
             int nbHiddenLayerWeights = prevNbPerceptron * nbHiddenPerceptron;
             for (int j = 0; j < nbHiddenLayerWeights; j++, count++)
             {

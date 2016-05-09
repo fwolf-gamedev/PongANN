@@ -38,6 +38,11 @@ public class AIController : PaddleController
             return;
 
         ProcessOutput();
+        //if (IsLearning)
+        //{
+        //    Ball ball = GameMgr.Instance.GetBall();
+        //    LearnFromBallPos(ball.transform.position);
+        //}
 
         // deduce paddle move from output
         //wantedPosY = (output - 0.5f) * GameMgr.Instance.CourtHeight;
@@ -51,18 +56,12 @@ public class AIController : PaddleController
         //// ball pos
         //inputList.Add(ball.transform.position.y);
         //// ball velocity
-        //Rigidbody2D rb = ball.GetComponent<Rigidbody2D>();
         //inputList.Add(rb.velocity.x);
         //inputList.Add(rb.velocity.y);
 
-        Ball.BallData colParams = ball.GetBallData;
-        //inputList.Clear();
-        inputList.Add(colParams.posY);
-        //inputList.Add(GameMgr.ComputeBallPos0To1(ball.transform.position.y));
-        //inputList.Add(ball.transform.position.y);
-        inputList.Add(colParams.angle);
-        //inputList.Add(colParams.direction.x);
-        //inputList.Add(colParams.direction.y);
+        inputList.Add(Ball.GetRoundedPos(ball.transform.position.y));
+        //Rigidbody2D rb = ball.GetComponent<Rigidbody2D>();
+        //inputList.Add(Ball.GetAngleInt(rb.velocity.normalized));
 
         if (outputList != null)
             outputList.Clear();
@@ -84,11 +83,10 @@ public class AIController : PaddleController
             LearnFromBallPos(ballPos);
     }
 
-    public void OnBallCollide(Vector3 ballPos)
+    public void OnBallCollideAIPaddle(Vector3 ballPos)
     {
         if (IsLearning)
             LearnFromBallPos(ballPos);
-//        ProcessOutput();
     }
 
     public void OnBallThrown()
@@ -114,6 +112,8 @@ public class AIController : PaddleController
         //inputList.Add(colParams.direction.y);
         //inputList.Add(ballPos.x);
         //inputList.Add(ballPos.y);
+        //Ball ball = GameMgr.Instance.GetBall();
+        //ball.SaveBallData();
 
         // do learning via backpropagation
         List<float> outputs = new List<float>();

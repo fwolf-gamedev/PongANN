@@ -10,7 +10,29 @@ public class Ball : MonoBehaviour {
         public int angle;
     }
     private BallData ballData = new BallData();
-    public BallData GetBallData { get { return ballData; } }
+    public BallData GetBallData()
+    {
+        return ballData;
+    }
+
+    private void SetBallData(Vector2 dir, float posY)
+    {
+        if (dir.magnitude == 0)
+            dir = Vector2.right;
+        SetBallData(GetAngleInt(dir), posY);
+    }
+
+    public void SetBallData(int angle, float posY)
+    {
+        ballData.angle = angle;
+        ballData.posY = GetRoundedPos(posY);
+    }
+
+    public void SaveBallData()
+    {
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        SetBallData(rb.velocity.normalized, transform.position.y);
+    }
 
     public float InitialSpeed = 10f;
     public float MaxSpeed = 30f;
@@ -22,6 +44,16 @@ public class Ball : MonoBehaviour {
 	// Use this for initialization
 	void Awake () {
         rigidBody = GetComponent<Rigidbody2D>();
+    }
+
+    static public int GetAngleInt(Vector2 dir)
+    {
+        return Mathf.RoundToInt(Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg);
+    }
+
+    static public float GetRoundedPos(float posY)
+    {
+        return (float)Math.Round(Convert.ToDecimal(posY), 1);
     }
 
     public void Launch(bool useRandomDir = false, bool repeatLastLaunch = false)
@@ -46,9 +78,7 @@ public class Ball : MonoBehaviour {
         currentSpeed = InitialSpeed;
 
         // store ball trajectory data
-        ballData.posY = (float)Math.Round(Convert.ToDecimal(transform.position.y), 1);
-        ballData.angle = angle;
-        //ballData.angle = Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg;
+        SetBallData(angle, transform.position.y);
 
         // $$$ Q&D
         GameMgr.Instance.AI.OnBallThrown();
@@ -67,7 +97,22 @@ public class Ball : MonoBehaviour {
     {
         return (transform.position.y - racketPos.y) / racketHeight;
     }
-    
+
+    void OnCollisionStay2D(Collision2D col)
+    {
+        if (col.gameObject.tag != "Player")
+            return;
+
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb.velocity.magnitude == 0f)
+        {
+            rb.velocity = Vector2.left * currentSpeed;
+            Vector3 newPos = transform.position;
+            newPos.x -= transform.localScale.x;
+            transform.position = newPos;
+        }
+    }
+
     void OnCollisionEnter2D(Collision2D col)
     {
         if (col.gameObject.tag != "Player")
@@ -85,6 +130,10 @@ public class Ball : MonoBehaviour {
                 currentSpeed = Mathf.Min(MaxSpeed, currentSpeed + HitAcceleration);
                 GetComponent<Rigidbody2D>().velocity = dir * currentSpeed;
             }
+            else
+            {
+                Debug.LogWarning("magnitude <= 0 " + dir.magnitude);
+            }
         }
         // collision with front part of the bracket
         else
@@ -97,17 +146,20 @@ public class Ball : MonoBehaviour {
                 currentSpeed = Mathf.Min(MaxSpeed, currentSpeed + HitAcceleration);
                 GetComponent<Rigidbody2D>().velocity = dir * currentSpeed;
             }
+            else
+            {
+                Debug.LogWarning("magnitude <= 0 " + dir.magnitude);
+            }
         }
 
         // learn from ball collision
         AIController ai = col.gameObject.GetComponent<AIController>();
         if (ai != null)
-            ai.OnBallCollide(transform.position);
+            ai.OnBallCollideAIPaddle(transform.position);
         else
         {
-            ballData.posY = (float)Math.Round(Convert.ToDecimal(transform.position.y), 1);
             Vector2 dir = GetComponent<Rigidbody2D>().velocity.normalized;
-            ballData.angle = Mathf.RoundToInt(Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg);
+            SetBallData(dir, transform.position.y);
             // $$$ Q&D
             GameMgr.Instance.AI.OnBallThrown();
         }
