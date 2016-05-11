@@ -47,7 +47,8 @@ public class AIController : PaddleController
     {
         inputList.Clear();
         Ball ball = GameMgr.Instance.GetBall();
-        inputList.Add(Ball.GetBallPos0To1Rounded(ball.transform.position.y));
+        //inputList.Add(Ball.GetBallPos0To1Rounded(ball.transform.position.y));
+        inputList.Add(ball.transform.position.y);
         //Rigidbody2D rb = ball.Rigidbody;
         //inputList.Add(Ball.GetAngleInt(rb.velocity.normalized));
         // BIAS

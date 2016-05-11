@@ -6,8 +6,8 @@ public class Ball : MonoBehaviour {
 
     public class BallData
     {
-        public float posY;
-        public float angle;
+        public float posY = 0f;
+        public float angle = 0.5f;
     }
     private BallData ballData = new BallData();
     public BallData GetBallData()
