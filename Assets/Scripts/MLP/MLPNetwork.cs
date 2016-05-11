@@ -30,6 +30,8 @@ public class MLPNetwork : MonoBehaviour
     public List<List<float>> HiddenLayerWeights = new List<List<float>>();
     public List<float> OutputLayerWeights = new List<float>();
 
+    public int NbEpoch = 0;
+
     void Start()
     {
         for (int i = 0; i < NbInputPerceptron; i++)
@@ -110,6 +112,7 @@ public class MLPNetwork : MonoBehaviour
     {
         GenerateOutput(input);
         Backpropagation(output);
+        NbEpoch++;
     }
 
     public void GenerateOutput(List<float> inputs)

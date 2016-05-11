@@ -6,7 +6,7 @@ public class Ball : MonoBehaviour {
 
     public class BallData
     {
-        public float posY = 0f;
+        public Vector2 pos = Vector2.zero;
         public float angle = 0.5f;
     }
     private BallData ballData = new BallData();
@@ -15,22 +15,19 @@ public class Ball : MonoBehaviour {
         return ballData;
     }
 
-    private void SetBallData(Vector2 dir, float posY)
+    private void SetBallData(Vector2 dir, Vector2 pos)
     {
         if (dir.magnitude == 0)
             dir = Vector2.right;
-        SetBallData(GetAngleInt(dir), posY);
+        SetBallData(GetAngleInt(dir), pos);
     }
 
-    public void SetBallData(float angle, float posY)
+    public void SetBallData(float angle, Vector2 pos)
     {
+        if (angle == 0f)
+            Debug.Log("angle zero");
         ballData.angle = angle;
-        ballData.posY = posY;
-    }
-
-    public void SaveBallData()
-    {
-        SetBallData(rigidBody.velocity.normalized, GetBallPos0To1Rounded(transform.position.y));
+        ballData.pos = pos;
     }
 
     public float InitialSpeed = 10f;
@@ -53,7 +50,7 @@ public class Ball : MonoBehaviour {
 
     static public float GetAngle0To1(int angle)
     {
-        float angle0To1 = (angle + 90) / 180;
+        float angle0To1 = (angle + 90) / 180f;
         return GetRoundedValue(angle0To1);
     }
 
@@ -90,9 +87,9 @@ public class Ball : MonoBehaviour {
         float angle = 0.5f;
         if (repeatLastLaunch)
         {
-            Vector3 pos = transform.position;
-            pos.y = ComputeBallPosCourt(ballData.posY);
-            transform.position = pos;
+            //Vector3 pos = transform.position;
+            //pos.y = ComputeBallPosCourt(ballData.pos.y);
+            transform.position = ballData.pos;
             angle = ballData.angle;
         }
         else if (useRandomDir)
@@ -106,7 +103,7 @@ public class Ball : MonoBehaviour {
         currentSpeed = InitialSpeed;
 
         // store ball trajectory data
-        SetBallData(angle, GetBallPos0To1Rounded(transform.position.y));
+        SetBallData(angle, transform.position);
 
         // $$$ Q&D
         GameMgr.Instance.AI.OnBallThrown();
@@ -154,6 +151,17 @@ public class Ball : MonoBehaviour {
 
     void OnCollisionEnter2D(Collision2D col)
     {
+        if (col.gameObject.tag == "Bound")
+        {
+            Vector2 dir = rigidBody.velocity.normalized;
+            if (dir.x > 0f) // don't store data coming from player racket
+            {
+                SetBallData(dir, transform.position);
+                GameMgr.Instance.AI.OnBallBounce();
+            }
+            return;
+        }
+
         if (col.gameObject.tag != "Player")
             return;
 
@@ -198,7 +206,7 @@ public class Ball : MonoBehaviour {
         else
         {
             Vector2 dir = rigidBody.velocity.normalized;
-            SetBallData(dir, GetBallPos0To1(transform.position.y));
+            SetBallData(dir, transform.position);
             // $$$ Q&D
             GameMgr.Instance.AI.OnBallThrown();
         }

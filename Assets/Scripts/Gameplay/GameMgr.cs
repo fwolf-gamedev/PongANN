@@ -83,22 +83,22 @@ public class GameMgr : MonoBehaviour {
         {
             Vector3 trainingPos = playerGao.transform.position + Vector3.right * 0.6f;
 
-            if (ai.IsErrorAcceptable == false) // cancel training step to repeat ball trajectory
-                trainingStep--;
+            //if (ai.IsErrorAcceptable == false) // cancel training step to repeat ball trajectory
+            //    trainingStep--;
 
             if (isDownward)
                 trainingPos.y = CourtHeight / 2f - ball.transform.localScale.y / 2f - ball.transform.localScale.y * trainingStep;
             else
                 trainingPos.y = CourtHeight / 2f - ball.transform.localScale.y / 2f - ball.transform.localScale.y * (nbTrainingSteps - trainingStep);
             ball.transform.position = trainingPos;
-            if (trainingStep == nbTrainingSteps - 1)
+            if (trainingStep % 2 == 0)
                 isDownward = !isDownward;
             trainingStep = (trainingStep + 1) % nbTrainingSteps;
             TryLaunchBall();
         }
 
-        //ballDataPosYText.text = ball.GetBallData().posY.ToString();
-        ballDataPosYText.text = ball.transform.position.y.ToString();
+        ballDataPosYText.text = ball.GetBallData().pos.ToString();
+        //ballDataPosYText.text = ball.transform.position.y.ToString();
         ballDataVelocityText.text = ball.GetBallData().angle.ToString();
         outputText.text = ai.output.ToString();
         expectedPosYText.text = ai.ExpectedOutput.ToString();
@@ -124,7 +124,7 @@ public class GameMgr : MonoBehaviour {
         if (isBallLaunched == false)
         {
             if (TrainingModeOn)
-                ball.Launch(RandomDirOn, ai.IsErrorAcceptable == false);
+                ball.Launch(RandomDirOn);//, ai.IsErrorAcceptable == false);
             else
                 ball.Launch();
             isBallLaunched = true;

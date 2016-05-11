@@ -37,7 +37,7 @@ public class AIController : PaddleController
         if (++frameCount % UpdateFrenquency != 0)
             return;
 
-        ProcessOutput();
+        //ProcessOutput();
 
         // deduce paddle move from output
         wantedPosY = Ball.ComputeBallPosCourt(output);
@@ -48,9 +48,10 @@ public class AIController : PaddleController
         inputList.Clear();
         Ball ball = GameMgr.Instance.GetBall();
         //inputList.Add(Ball.GetBallPos0To1Rounded(ball.transform.position.y));
+        inputList.Add(ball.transform.position.x);
         inputList.Add(ball.transform.position.y);
-        //Rigidbody2D rb = ball.Rigidbody;
-        //inputList.Add(Ball.GetAngleInt(rb.velocity.normalized));
+        Rigidbody2D rb = ball.Rigidbody;
+        inputList.Add(Ball.GetAngleInt(rb.velocity.normalized));
         // BIAS
         //inputList.Add(1f);
 
@@ -85,10 +86,15 @@ public class AIController : PaddleController
         ProcessOutput();
     }
 
+    public void OnBallBounce()
+    {
+        ProcessOutput();
+    }
+
     private void LearnFromBallPos(Vector3 ballPos)
     {
         expectedOutput = Ball.GetBallPos0To1Rounded(ballPos.y);
-        Debug.Log(expectedOutput);
+        //Debug.Log(expectedOutput);
 
         deltaError = Mathf.Abs(expectedOutput - Ball.GetRoundedValue(output, 2));
 
@@ -96,5 +102,19 @@ public class AIController : PaddleController
         List<float> outputs = new List<float>();
         outputs.Add(expectedOutput);
         MLPNet.LearnPattern(inputList, outputs);
+
+        int nbLearnLoop = 0;
+
+        // check learning result and relaunch if necessary
+        do
+        {
+            MLPNet.GenerateOutput(inputList);
+            output = MLPNet.GetOutputs()[0];
+            deltaError = Mathf.Abs(expectedOutput - Ball.GetRoundedValue(output, 2));
+            if (IsErrorAcceptable == false)
+                MLPNet.LearnPattern(inputList, outputs);
+            nbLearnLoop++;
+        }
+        while (IsErrorAcceptable == false && nbLearnLoop < 100);
     }
 }
