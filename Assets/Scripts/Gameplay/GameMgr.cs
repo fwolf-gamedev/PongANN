@@ -75,6 +75,8 @@ public class GameMgr : MonoBehaviour {
         nbTrainingSteps = Mathf.RoundToInt(courtHeight / ball.transform.localScale.y);
     }
 
+    bool isDownward = true;
+
     void Update()
     {
         if (TrainingModeOn && isBallLaunched == false)
@@ -84,8 +86,13 @@ public class GameMgr : MonoBehaviour {
             if (ai.IsErrorAcceptable == false) // cancel training step to repeat ball trajectory
                 trainingStep--;
 
-            trainingPos.y = CourtHeight / 2f - ball.transform.localScale.y / 2f - ball.transform.localScale.y * trainingStep;
+            if (isDownward)
+                trainingPos.y = CourtHeight / 2f - ball.transform.localScale.y / 2f - ball.transform.localScale.y * trainingStep;
+            else
+                trainingPos.y = CourtHeight / 2f - ball.transform.localScale.y / 2f - ball.transform.localScale.y * (nbTrainingSteps - trainingStep);
             ball.transform.position = trainingPos;
+            if (trainingStep == nbTrainingSteps - 1)
+                isDownward = !isDownward;
             trainingStep = (trainingStep + 1) % nbTrainingSteps;
             TryLaunchBall();
         }
@@ -163,17 +170,5 @@ public class GameMgr : MonoBehaviour {
 
             ai.OnPointLost(ball.transform.position);
         }
-    }
-
-    static public float ComputeBallPos0To1(float posY)
-    {
-        int courtHeight = GameMgr.Instance.CourtHeight;
-        float output = posY / courtHeight + 0.5f;
-        return output = Mathf.Max(Mathf.Min(output, 1f), 0f);
-    }
-
-    static public float ComputeBallPosCourt(float pos0To1)
-    {
-        return (pos0To1 - 0.5f) * GameMgr.Instance.CourtHeight;
     }
 }

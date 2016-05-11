@@ -7,7 +7,7 @@ public class Ball : MonoBehaviour {
     public class BallData
     {
         public float posY;
-        public int angle;
+        public float angle;
     }
     private BallData ballData = new BallData();
     public BallData GetBallData()
@@ -22,16 +22,15 @@ public class Ball : MonoBehaviour {
         SetBallData(GetAngleInt(dir), posY);
     }
 
-    public void SetBallData(int angle, float posY)
+    public void SetBallData(float angle, float posY)
     {
         ballData.angle = angle;
-        ballData.posY = GetRoundedPos(posY);
+        ballData.posY = posY;
     }
 
     public void SaveBallData()
     {
-        Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        SetBallData(rb.velocity.normalized, transform.position.y);
+        SetBallData(rigidBody.velocity.normalized, GetBallPos0To1Rounded(transform.position.y));
     }
 
     public float InitialSpeed = 10f;
@@ -46,39 +45,68 @@ public class Ball : MonoBehaviour {
         rigidBody = GetComponent<Rigidbody2D>();
     }
 
-    static public int GetAngleInt(Vector2 dir)
+    static public float GetAngleInt(Vector2 dir)
     {
-        return Mathf.RoundToInt(Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg);
+        int angle = Mathf.RoundToInt(Mathf.Acos(dir.x) * Mathf.Sign(dir.y) * Mathf.Rad2Deg);
+        return GetAngle0To1(angle);
     }
 
-    static public float GetRoundedPos(float posY)
+    static public float GetAngle0To1(int angle)
     {
-        return (float)Math.Round(Convert.ToDecimal(posY), 1);
+        float angle0To1 = (angle + 90) / 180;
+        return GetRoundedValue(angle0To1);
+    }
+
+    static public int GetAngleDegree(float angle)
+    {
+        int angleDegree = Mathf.RoundToInt((angle * 180f) - 90f);
+        return angleDegree;
+    }
+
+    static public float GetRoundedValue(float val, int nbDecimal = 1)
+    {
+        return (float)Math.Round(Convert.ToDecimal(val), nbDecimal);
+    }
+
+    static public float GetBallPos0To1(float posY)
+    {
+        int courtHeight = GameMgr.Instance.CourtHeight;
+        float output = posY / courtHeight + 0.5f;
+        return output = Mathf.Max(Mathf.Min(output, 1f), 0f);
+    }
+
+    static public float GetBallPos0To1Rounded(float posY)
+    {
+        return GetRoundedValue(GetBallPos0To1(posY), 2);
+    }
+
+    static public float ComputeBallPosCourt(float pos0To1)
+    {
+        return (pos0To1 - 0.5f) * GameMgr.Instance.CourtHeight;
     }
 
     public void Launch(bool useRandomDir = false, bool repeatLastLaunch = false)
     {
-        int angle = 0;
+        float angle = 0.5f;
         if (repeatLastLaunch)
         {
             Vector3 pos = transform.position;
-            pos.y = ballData.posY;
+            pos.y = ComputeBallPosCourt(ballData.posY);
             transform.position = pos;
             angle = ballData.angle;
         }
         else if (useRandomDir)
         {
-            angle = UnityEngine.Random.Range(0, 60);
-            if (UnityEngine.Random.Range(0, 2) == 0)
-                angle *= -1;
+            angle = UnityEngine.Random.Range(0.2f, 0.8f);
         }
 
-        Vector2 dir = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
+        int degAngle = GetAngleDegree(angle);
+        Vector2 dir = new Vector2(Mathf.Cos(degAngle * Mathf.Deg2Rad), Mathf.Sin(degAngle * Mathf.Deg2Rad));
         rigidBody.velocity = dir * InitialSpeed;
         currentSpeed = InitialSpeed;
 
         // store ball trajectory data
-        SetBallData(angle, transform.position.y);
+        SetBallData(angle, GetBallPos0To1Rounded(transform.position.y));
 
         // $$$ Q&D
         GameMgr.Instance.AI.OnBallThrown();
@@ -86,11 +114,10 @@ public class Ball : MonoBehaviour {
 
     void Update()
     {
-        //if (rigidBody.velocity.magnitude == 0)
-        //{
-        //    ballData.posY = transform.position.y;
-        //    ballData.direction = Vector2.right;
-        //}
+        if (IsBallStuck())
+            ForceBallBounceBack();
+        else if (IsBallOut())
+            transform.position = Vector2.zero;
     }
 
     float ComputeHitFactor(Vector2 racketPos, float racketHeight)
@@ -103,14 +130,26 @@ public class Ball : MonoBehaviour {
         if (col.gameObject.tag != "Player")
             return;
 
-        Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        if (rb.velocity.magnitude == 0f)
-        {
-            rb.velocity = Vector2.left * currentSpeed;
-            Vector3 newPos = transform.position;
-            newPos.x -= transform.localScale.x;
-            transform.position = newPos;
-        }
+        if (IsBallStuck())
+            ForceBallBounceBack();
+    }
+
+    private bool IsBallStuck()
+    {
+        return GameMgr.Instance.IsBallLaunched() && rigidBody.velocity.magnitude <= 0.001f;
+    }
+
+    private bool IsBallOut()
+    {
+        return Mathf.Abs(transform.position.x) > 10f || Mathf.Abs(transform.position.y) > 10f;
+    }
+
+    private void ForceBallBounceBack()
+    {
+        rigidBody.velocity = Vector2.left * currentSpeed;
+        Vector3 newPos = transform.position;
+        newPos.x -= transform.localScale.x;
+        transform.position = newPos;
     }
 
     void OnCollisionEnter2D(Collision2D col)
@@ -128,7 +167,7 @@ public class Ball : MonoBehaviour {
             if (dir.magnitude > 0f)
             {
                 currentSpeed = Mathf.Min(MaxSpeed, currentSpeed + HitAcceleration);
-                GetComponent<Rigidbody2D>().velocity = dir * currentSpeed;
+                rigidBody.velocity = dir * currentSpeed;
             }
             else
             {
@@ -144,7 +183,7 @@ public class Ball : MonoBehaviour {
             if (dir.magnitude > 0f)
             {
                 currentSpeed = Mathf.Min(MaxSpeed, currentSpeed + HitAcceleration);
-                GetComponent<Rigidbody2D>().velocity = dir * currentSpeed;
+                rigidBody.velocity = dir * currentSpeed;
             }
             else
             {
@@ -158,8 +197,8 @@ public class Ball : MonoBehaviour {
             ai.OnBallCollideAIPaddle(transform.position);
         else
         {
-            Vector2 dir = GetComponent<Rigidbody2D>().velocity.normalized;
-            SetBallData(dir, transform.position.y);
+            Vector2 dir = rigidBody.velocity.normalized;
+            SetBallData(dir, GetBallPos0To1(transform.position.y));
             // $$$ Q&D
             GameMgr.Instance.AI.OnBallThrown();
         }
